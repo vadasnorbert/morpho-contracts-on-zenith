@@ -1,0 +1,6 @@
+[submodule "morpho-blue"]
+	path = morpho-blue
+	url = https://github.com/morpho-org/morpho-blue
+[submodule "vault-v2"]
+	path = vault-v2
+	url = https://github.com/morpho-org/vault-v2

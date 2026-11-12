@@ -1,0 +1,14 @@
+[profile.default]
+src = "src"
+script = "script"
+out = "out"
+libs = ["../vault-v2/lib"]
+solc = "0.8.28"
+evm_version = "cancun"
+allow_paths = [".."]
+remappings = [
+  "vault-v2/=../vault-v2/src/",
+  "morpho-blue/=../vault-v2/lib/morpho-blue/src/",
+  "@openzeppelin/=../vault-v2/lib/openzeppelin-contracts/contracts/",
+  "forge-std/=../vault-v2/lib/forge-std/src/",
+]

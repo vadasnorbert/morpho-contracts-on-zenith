@@ -1,0 +1,36 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  ZUSD 0x94f56A17f02D8246301eb206B2fc5579a266aF05
+  ZETH 0x2914e9FEC92f9DF44797969682656a4166a2E46E
+  ORACLE 0xbdAAA4A475F6197f8AeD0dA9839DA92A6D0fB79D
+  VAULT 0xa701b9260354F9721D9454C44Fe0e37c6b825636
+  ADAPTER 0x64287b133132a2dA64Cc52D06b10B28e98011116
+  0xf76fc23d58807765a2d4d70c1d5078e07c59bacc3e8f472e2df057823fd77d2e
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 936485
+
+Estimated max fee per gas: 16.500000007 gwei
+Estimated base fee per gas: 0.000000007 gwei
+Estimated max priority fee per gas: 16.499999993 gwei
+
+Estimated total gas used for script: 15941735
+
+Estimated amount required: 0.263038627611592145 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: /Users/norbertvadas/code/morpho-zenith/demo/broadcast/Setup.s.sol/936485/run-latest.json
+
+Sensitive values saved to: /Users/norbertvadas/code/morpho-zenith/demo/cache/Setup.s.sol/936485/run-latest.json
+

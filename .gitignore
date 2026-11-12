@@ -1,0 +1,11 @@
+# Secrets: deployer private key
+.env
+*.key
+
+# Foundry build output / local caches (cache/ also holds "sensitive values" from forge script)
+demo/out/
+demo/cache/
+demo/broadcast/*/*/dry-run/
+
+.DS_Store
+demo/broadcast/*/*/*.lock
