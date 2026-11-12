@@ -1,4 +1,4 @@
-# Morpho on Zenith EVM testnet
+# Morpho contracts on Zenith EVM testnet
 
 Deployment of the open-source [Morpho](https://github.com/morpho-org) lending stack (Morpho core + Vault V2) on **Zenith EVM testnet**, plus a demo zUSD/zETH market and vault.
 
