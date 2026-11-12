@@ -54,8 +54,8 @@ All addresses are also in [`deployments.env`](./deployments.env).
 | `morpho-blue/` | Submodule: [morpho-org/morpho-blue](https://github.com/morpho-org/morpho-blue) @ `430bd61` |
 | `vault-v2/` | Submodule: [morpho-org/vault-v2](https://github.com/morpho-org/vault-v2) @ `ec22379a` |
 | `deploy.sh` | Deploys the core contracts and enables the IRM and LLTVs |
-| `demo/` | Foundry project: `TestToken`, `FixedPriceOracle`, and `script/Setup.s.sol` (tokens, oracle, market, vault, demo deposit + borrow) |
-| `demo/broadcast/` | Transaction records of the demo setup run |
+| `demo/` | Foundry project: `TestToken`, `FixedPriceOracle`, `script/Setup.s.sol` (tokens, oracle, market, vault, demo deposit + borrow) and `script/Liquidate.s.sol` (liquidation demo) |
+| `demo/broadcast/` | Transaction records of the demo setup and liquidation runs |
 | `verify.sh` | Publishes the source of all deployed contracts on the explorer |
 | `deployments.env` | Deployed addresses |
 | `deploy.log`, `demo-setup.log` | Output of the deployment runs |
@@ -65,8 +65,8 @@ All addresses are also in [`deployments.env`](./deployments.env).
 Requires [Foundry](https://getfoundry.sh/).
 
 ```sh
-git clone --recurse-submodules https://github.com/vadasnorbert/morpho-zenith
-cd morpho-zenith
+git clone --recurse-submodules https://github.com/vadasnorbert/morpho-contracts-on-zenith
+cd morpho-contracts-on-zenith
 cp .env.example .env   # fill in DEPLOYER_ADDRESS / DEPLOYER_ACCOUNT
 ```
 
@@ -102,8 +102,43 @@ Verify sources on the explorer (no signing needed):
 ```sh
 # price = loan units per collateral unit, scaled by 1e36. 2,000 zUSD/zETH = 2000e24
 cast send 0xbdAAA4A475F6197f8AeD0dA9839DA92A6D0fB79D "setPrice(uint256)" 1500000000000000000000000000 \
-  --rpc-url "$ZENITH_RPC_URL" --account "$DEPLOYER_ACCOUNT"
+  --rpc-url "$ZENITH_RPC_URL" --account "$DEPLOYER_ACCOUNT" --priority-gas-price 1gwei
 ```
+
+> **Gas tip:** the Zenith testnet RPC currently suggests a 500–600 gwei priority fee although the base fee is 7 wei and blocks are nearly empty. Pass `--priority-gas-price 1gwei` (and `--with-gas-price 2gwei` for `forge script`), otherwise transactions cost ~600x more than needed.
+
+## Liquidation demo
+
+`demo/script/Liquidate.s.sol` liquidates the demo borrower in the zETH/zUSD market with a separate liquidator wallet:
+
+1. **Deployer** (oracle owner, token minter): gives the liquidator ZTH for gas and enough zUSD to repay, then drops the oracle price to 1,100 zUSD/zETH. The borrower's 10 zETH / 10,000 zUSD position goes from 50% to 90.9% LTV, above the 86% LLTV.
+2. **Liquidator** (`0x87f36CfCA238B1c3a1AD15889ec0B971F9A0F599`): repays the whole debt and seizes collateral at a discount.
+3. **Deployer**: restores the price to 2,000.
+
+Result on testnet (12 Nov 2026):
+
+| | |
+|---|---|
+| Debt repaid by liquidator | 10,000.01 zUSD |
+| Collateral seized | 9.4895 zETH (worth 10,438.43 zUSD at 1,100) |
+| Liquidation incentive | 4.38% = `1 / (1 - 0.3 × (1 - 0.86))`, Morpho's formula |
+| Borrower after | 0 debt, 0.5105 zETH collateral left |
+| Liquidate tx | [`0x5ca1998b…3099b55`](https://explorer.testnet.zenith.network/transactions/0x5ca1998b237a09e02e52446526e683713c019ea7de8536a11b31762573099b55) |
+| Price restore tx | [`0x03f493ea…4aa054b602`](https://explorer.testnet.zenith.network/transactions/0x03f493ea77f57b5dd7dd57692f5fbef9a4bfca0db7c545c7ac62748aa054b602) |
+
+A first attempt (`demo/broadcast/Liquidate.s.sol/936485/run-1794481584218.json`) ran out of liquidator gas because of the high suggested tip above; the re-run (`run-1794481780457.json`) completed it.
+
+To run it (create the liquidator wallet once with `cast wallet new zenith-liquidator`, then set `LIQUIDATOR` / `LIQUIDATOR_ACCOUNT` in `.env`):
+
+```sh
+set -a; . ./.env; . ./deployments.env; set +a
+cd demo
+forge script script/Liquidate.s.sol --rpc-url "$ZENITH_RPC_URL" --broadcast --slow \
+  --with-gas-price 2gwei --priority-gas-price 1gwei \
+  --account "$DEPLOYER_ACCOUNT" --account "$LIQUIDATOR_ACCOUNT" --sender "$DEPLOYER_ADDRESS"
+```
+
+Optional env: `CRASH_PRICE_USD` (default 1100), `RESTORE_PRICE_USD` (default 2000), `BORROWER` (default deployer). To re-run it, the borrower first needs a new position (supply zETH collateral and borrow zUSD).
 
 ## License
 
