@@ -54,8 +54,9 @@ All addresses are also in [`deployments.env`](./deployments.env).
 | `morpho-blue/` | Submodule: [morpho-org/morpho-blue](https://github.com/morpho-org/morpho-blue) @ `430bd61` |
 | `vault-v2/` | Submodule: [morpho-org/vault-v2](https://github.com/morpho-org/vault-v2) @ `ec22379a` |
 | `deploy.sh` | Deploys the core contracts and enables the IRM and LLTVs |
-| `demo/` | Foundry project: `TestToken`, `FixedPriceOracle`, `script/Setup.s.sol` (tokens, oracle, market, vault, demo deposit + borrow) and `script/Liquidate.s.sol` (liquidation demo) |
-| `demo/broadcast/` | Transaction records of the demo setup and liquidation runs |
+| `demo/` | Foundry project: `TestToken`, `FixedPriceOracle`, `script/Setup.s.sol` (one-time: tokens, oracle, market, vault), `script/Demo1Borrow.s.sol` and `script/Demo2Liquidate.s.sol` (the demos) |
+| `demo.sh` | Runs the demos: `./demo.sh borrow`, then `./demo.sh liquidate` |
+| `demo/broadcast/` | Transaction records of the setup and demo runs |
 | `verify.sh` | Publishes the source of all deployed contracts on the explorer |
 | `deployments.env` | Deployed addresses |
 | `deploy.log`, `demo-setup.log` | Output of the deployment runs |
@@ -82,7 +83,7 @@ Deploy the core contracts (prompts for the keystore password; set `KEYSTORE_PASS
 ./deploy.sh
 ```
 
-Create the demo tokens, oracle, market and vault:
+Create the demo tokens, oracle, market and vault (one-time, already done on testnet; the [demos](#demos) below build on it):
 
 ```sh
 set -a; . ./.env; . ./deployments.env; set +a
@@ -107,15 +108,34 @@ cast send 0xbdAAA4A475F6197f8AeD0dA9839DA92A6D0fB79D "setPrice(uint256)" 1500000
 
 > **Gas tip:** the Zenith testnet RPC currently suggests a 500–600 gwei priority fee although the base fee is 7 wei and blocks are nearly empty. Pass `--priority-gas-price 1gwei` (and `--with-gas-price 2gwei` for `forge script`), otherwise transactions cost ~600x more than needed.
 
-## Liquidation demo
+## Demos
 
-`demo/script/Liquidate.s.sol` liquidates the demo borrower in the zETH/zUSD market with a separate liquidator wallet:
+Two demos on the zETH/zUSD market, run in order. Run demo 1, then demo 2; after demo 2 the position is closed and you can start again with demo 1.
 
-1. **Deployer** (oracle owner, token minter): gives the liquidator ZTH for gas and enough zUSD to repay, then drops the oracle price to 1,100 zUSD/zETH. The borrower's 10 zETH / 10,000 zUSD position goes from 50% to 90.9% LTV, above the 86% LLTV.
-2. **Liquidator** (`0x87f36CfCA238B1c3a1AD15889ec0B971F9A0F599`): repays the whole debt and seizes collateral at a discount.
-3. **Deployer**: restores the price to 2,000.
+| | Command | What happens |
+|---|---|---|
+| **Demo 1 — borrow** | `./demo.sh borrow` | Sets the price to 2,000 zUSD/zETH. The lender (deployer) deposits 20,000 zUSD into the **ZLP zUSD Vault**, which supplies it to the market. The borrower posts 10 zETH and borrows 10,000 zUSD (50% LTV). |
+| **Demo 2 — liquidate** | `./demo.sh liquidate` | The deployer drops the price until the position is at 95% LTV (above the 86% LLTV). The liquidator repays the whole debt and seizes zETH at a ~4.4% discount. The deployer restores the price to 2,000. Refuses to run if there is no debt ("run demo 1 first"). |
 
-Result on testnet (12 Nov 2026):
+Each prints the borrower's position, market totals and vault assets before and after.
+
+**Wallets.** The demos sign with encrypted Foundry keystores named in `.env`:
+
+| Role | `.env` | Needs |
+|---|---|---|
+| Deployer: lender, oracle owner, token minter | `DEPLOYER_ADDRESS`, `DEPLOYER_ACCOUNT` | The deployer keystore (only the deployer can mint test tokens and set the price) |
+| Borrower | `BORROWER`, `BORROWER_ACCOUNT` (optional) | Defaults to the deployer. A separate borrower gets zETH and ZTH for gas from the deployer |
+| Liquidator | `LIQUIDATOR`, `LIQUIDATOR_ACCOUNT` | Create once: `cast wallet new zenith-liquidator`. Gets zUSD and ZTH for gas from the deployer |
+
+`demo.sh` asks for each keystore's password once per run. Extra arguments go to `forge`, e.g. `./demo.sh borrow --rpc-url http://127.0.0.1:8545` against a local `anvil --fork-url` copy of the testnet.
+
+Optional env: demo 1 — `LEND_ZUSD` (20000), `COLLATERAL_ZETH` (10), `BORROW_ZUSD` (10000), `PRICE_USD` (2000); demo 2 — `CRASH_PRICE_USD` (default: price giving 95% LTV), `RESTORE_PRICE_USD` (2000).
+
+> `demo.sh` caps the tip at 1 gwei (see the gas note above) and doubles gas estimates: forge estimates in a simulation where no time has passed, and interest accrual costs more gas once time has passed on chain.
+
+### First liquidation on testnet
+
+The first liquidation (before the demos were split, script then called `Liquidate.s.sol`) liquidated the position opened by the setup script: price dropped to 1,100 zUSD/zETH (10 zETH / 10,000 zUSD went from 50% to 90.9% LTV), liquidator `0x87f36CfCA238B1c3a1AD15889ec0B971F9A0F599`. Result on testnet (12 Nov 2026):
 
 | | |
 |---|---|
@@ -127,18 +147,6 @@ Result on testnet (12 Nov 2026):
 | Price restore tx | [`0x03f493ea…4aa054b602`](https://explorer.testnet.zenith.network/transactions/0x03f493ea77f57b5dd7dd57692f5fbef9a4bfca0db7c545c7ac62748aa054b602) |
 
 A first attempt (`demo/broadcast/Liquidate.s.sol/936485/run-1794481584218.json`) ran out of liquidator gas because of the high suggested tip above; the re-run (`run-1794481780457.json`) completed it.
-
-To run it (create the liquidator wallet once with `cast wallet new zenith-liquidator`, then set `LIQUIDATOR` / `LIQUIDATOR_ACCOUNT` in `.env`):
-
-```sh
-set -a; . ./.env; . ./deployments.env; set +a
-cd demo
-forge script script/Liquidate.s.sol --rpc-url "$ZENITH_RPC_URL" --broadcast --slow \
-  --with-gas-price 2gwei --priority-gas-price 1gwei \
-  --account "$DEPLOYER_ACCOUNT" --account "$LIQUIDATOR_ACCOUNT" --sender "$DEPLOYER_ADDRESS"
-```
-
-Optional env: `CRASH_PRICE_USD` (default 1100), `RESTORE_PRICE_USD` (default 2000), `BORROWER` (default deployer). To re-run it, the borrower first needs a new position (supply zETH collateral and borrow zUSD).
 
 ## License
 
