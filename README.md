@@ -2,7 +2,7 @@
 
 Deployment of the open-source [Morpho](https://github.com/morpho-org) lending stack (Morpho core + Vault V2) on **Zenith EVM testnet**, plus a demo zUSD/zETH market and vault.
 
-User-facing, this deployment is branded **ZLP — Zenith Lending Protocol** (e.g. the vault is named "ZLP zUSD Vault", symbol `zlpUSD`). ZLP is not affiliated with or endorsed by Morpho; it runs Morpho's unmodified open-source contracts.
+User-facing, this deployment is branded **ZLP — Zenith Lending Protocol** (e.g. the vault is named "ZLP zUSD Vault", symbol `zlpUSD`). **This deployment or ZLP is not affiliated with or endorsed by Morpho**; **it runs Morpho's unmodified open-source contracts.**
 
 All contracts below are deployed and **source-verified** on the [Zenith testnet explorer](https://explorer.testnet.zenith.network/).
 
