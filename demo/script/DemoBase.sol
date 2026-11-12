@@ -56,18 +56,54 @@ abstract contract DemoBase is Script {
         return uint256(morpho.position(id, borrower).borrowShares) * m.totalBorrowAssets / m.totalBorrowShares;
     }
 
+    function _collateral() internal view returns (uint256) {
+        return morpho.position(id, borrower).collateral;
+    }
+
+    /// Loan-to-value in basis points at `price` (oracle units).
+    function _ltvBps(uint256 price) internal view returns (uint256) {
+        uint256 collValue = _collateral() * price / 1e36;
+        return collValue == 0 ? 0 : _debt() * 10_000 / collValue;
+    }
+
+    /// Oracle price (oracle units) at which the borrower's position sits at `bps` loan-to-value.
+    function _priceForLtv(uint256 bps) internal view returns (uint256) {
+        return _debt() * 1e36 * 10_000 / (_collateral() * bps);
+    }
+
+    /// Formats `v` (with `dec` decimals) as a number with 2 decimals, e.g. 1001.52.
+    function _fmt(uint256 v, uint8 dec) internal pure returns (string memory) {
+        uint256 cents = v * 100 / 10 ** dec;
+        uint256 frac = cents % 100;
+        return string.concat(vm.toString(cents / 100), frac < 10 ? ".0" : ".", vm.toString(frac));
+    }
+
+    function _usd(uint256 v) internal pure returns (string memory) {
+        return string.concat(_fmt(v, 6), " zUSD");
+    }
+
+    function _eth(uint256 v) internal pure returns (string memory) {
+        return string.concat(_fmt(v, 18), " zETH");
+    }
+
+    function _price(uint256 p) internal pure returns (string memory) {
+        return string.concat(_fmt(p, 24), " zUSD per zETH");
+    }
+
+    function _pct(uint256 bps) internal pure returns (string memory) {
+        return string.concat(_fmt(bps, 2), "%");
+    }
+
     function _report(string memory label) internal view {
         uint256 price = oracle.price();
-        Position memory p = morpho.position(id, borrower);
         Market memory m = morpho.market(id);
-        uint256 debt = _debt();
-        uint256 collValue = uint256(p.collateral) * price / 1e36;
         console.log("---", label);
-        console.log("price zUSD per zETH:", price / PRICE_SCALE);
-        console.log("borrower collateral zETH (18 dp):", p.collateral);
-        console.log("borrower debt zUSD (6 dp):", debt);
-        console.log("borrower LTV bps (liquidatable above 8600):", collValue == 0 ? 0 : debt * 10_000 / collValue);
-        console.log("market supplied / borrowed zUSD (6 dp):", m.totalSupplyAssets, m.totalBorrowAssets);
-        console.log("vault total assets zUSD (6 dp):", vault.totalAssets());
+        console.log("  price:              ", _price(price));
+        console.log("  borrower collateral:", _eth(_collateral()));
+        console.log("  borrower debt:      ", _usd(_debt()));
+        console.log("  loan-to-value:      ", string.concat(_pct(_ltvBps(price)), " (liquidation above 86.00%)"));
+        console.log("  market supplied:    ", _usd(m.totalSupplyAssets));
+        console.log("  market borrowed:    ", _usd(m.totalBorrowAssets));
+        console.log("  vault total assets: ", _usd(vault.totalAssets()));
     }
 }

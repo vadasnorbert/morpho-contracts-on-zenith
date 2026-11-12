@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Runs the demos on Zenith EVM testnet:
-#   ./demo.sh borrow      demo 1: lend into the ZLP zUSD Vault, borrow zUSD against zETH
-#   ./demo.sh liquidate   demo 2: crash the price and liquidate the demo 1 position
+# Runs the demos on Zenith EVM testnet, in order 1 -> 2 -> 3a or 3b:
+#   ./demo.sh borrow        demo 1:  lend into the ZLP zUSD Vault, borrow zUSD against zETH
+#   ./demo.sh margin-call   demo 2:  price drops, the loan reaches 80% LTV, margin call printed
+#   ./demo.sh repay         demo 3a: borrower repays the loan and withdraws collateral
+#   ./demo.sh liquidate     demo 3b: price drops further, liquidator repays and seizes collateral
 # Extra arguments are passed to forge (e.g. --rpc-url http://127.0.0.1:8545 to try on a local fork).
 # Signs with the encrypted keystores named in .env (DEPLOYER_ACCOUNT, LIQUIDATOR_ACCOUNT, optional BORROWER_ACCOUNT).
 set -euo pipefail
@@ -9,9 +11,11 @@ cd "$(dirname "$0")"
 set -a; . ./.env; . ./deployments.env; set +a
 
 case "${1:-}" in
-  borrow)    script=script/Demo1Borrow.s.sol;     accounts=("$DEPLOYER_ACCOUNT" ${BORROWER_ACCOUNT:+"$BORROWER_ACCOUNT"}) ;;
-  liquidate) script=script/Demo2Liquidate.s.sol;  accounts=("$DEPLOYER_ACCOUNT" "$LIQUIDATOR_ACCOUNT") ;;
-  *) echo "usage: $0 borrow|liquidate [forge args...]" >&2; exit 1 ;;
+  borrow)      script=script/Demo1Borrow.s.sol;      accounts=("$DEPLOYER_ACCOUNT" ${BORROWER_ACCOUNT:+"$BORROWER_ACCOUNT"}) ;;
+  margin-call) script=script/Demo2MarginCall.s.sol;  accounts=("$DEPLOYER_ACCOUNT") ;;
+  repay)       script=script/Demo3aRepay.s.sol;      accounts=("$DEPLOYER_ACCOUNT" ${BORROWER_ACCOUNT:+"$BORROWER_ACCOUNT"}) ;;
+  liquidate)   script=script/Demo3bLiquidate.s.sol;  accounts=("$DEPLOYER_ACCOUNT" "$LIQUIDATOR_ACCOUNT") ;;
+  *) echo "usage: $0 borrow|margin-call|repay|liquidate [forge args...]" >&2; exit 1 ;;
 esac
 shift
 

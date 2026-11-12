@@ -54,8 +54,8 @@ All addresses are also in [`deployments.env`](./deployments.env).
 | `morpho-blue/` | Submodule: [morpho-org/morpho-blue](https://github.com/morpho-org/morpho-blue) @ `430bd61` |
 | `vault-v2/` | Submodule: [morpho-org/vault-v2](https://github.com/morpho-org/vault-v2) @ `ec22379a` |
 | `deploy.sh` | Deploys the core contracts and enables the IRM and LLTVs |
-| `demo/` | Foundry project: `TestToken`, `FixedPriceOracle`, `script/Setup.s.sol` (one-time: tokens, oracle, market, vault), `script/Demo1Borrow.s.sol` and `script/Demo2Liquidate.s.sol` (the demos) |
-| `demo.sh` | Runs the demos: `./demo.sh borrow`, then `./demo.sh liquidate` |
+| `demo/` | Foundry project: `TestToken`, `FixedPriceOracle`, `script/Setup.s.sol` (one-time: tokens, oracle, market, vault), `script/Demo1Borrow.s.sol`, `Demo2MarginCall.s.sol`, `Demo3aRepay.s.sol`, `Demo3bLiquidate.s.sol` (the demos, sharing `DemoBase.sol`) |
+| `demo.sh` | Runs the demos: `./demo.sh borrow`, `margin-call`, then `repay` or `liquidate` |
 | `demo/broadcast/` | Transaction records of the setup and demo runs |
 | `verify.sh` | Publishes the source of all deployed contracts on the explorer |
 | `deployments.env` | Deployed addresses |
@@ -110,14 +110,16 @@ cast send 0xbdAAA4A475F6197f8AeD0dA9839DA92A6D0fB79D "setPrice(uint256)" 1500000
 
 ## Demos
 
-Two demos on the zETH/zUSD market, run in order. Run demo 1, then demo 2; after demo 2 the position is closed and you can start again with demo 1.
+Four demos on the zETH/zUSD market, one loan's life from start to finish. Run them in order: **1 → 2 → 3a or 3b**. Both endings close the position and restore the price, so you can start again with demo 1.
 
-| | Command | What happens |
-|---|---|---|
-| **Demo 1 — borrow** | `./demo.sh borrow` | Sets the price to 2,000 zUSD/zETH. The lender (deployer) deposits 20,000 zUSD into the **ZLP zUSD Vault**, which supplies it to the market. The borrower posts 10 zETH and borrows 10,000 zUSD (50% LTV). |
-| **Demo 2 — liquidate** | `./demo.sh liquidate` | The deployer drops the price until the position is at 95% LTV (above the 86% LLTV). The liquidator repays the whole debt and seizes zETH at a ~4.4% discount. The deployer restores the price to 2,000. Refuses to run if there is no debt ("run demo 1 first"). |
+| | Command | What happens | Ends with |
+|---|---|---|---|
+| **1 — borrow** | `./demo.sh borrow` | Sets the price to 2,000 zUSD/zETH. The lender (deployer) deposits 20,000 zUSD into the **ZLP zUSD Vault**, which supplies it to the market. The borrower posts 10 zETH and borrows 10,000 zUSD (~50% LTV). | An open loan, well under the 86% LLTV |
+| **2 — margin call** | `./demo.sh margin-call` | The deployer drops the price until the loan sits at 80% LTV. Prints the margin call: LTV, the liquidation price, and how much zUSD to repay or zETH to add to get back to 50% LTV. | A loan close to liquidation |
+| **3a — repayment** | `./demo.sh repay` | The borrower answers the margin call: repays the whole debt plus interest and withdraws all collateral. The deployer restores the price to 2,000. | Closed position, borrower keeps the collateral |
+| **3b — liquidation** | `./demo.sh liquidate` | The borrower ignores the margin call: the deployer drops the price further, to 95% LTV (above the 86% LLTV). The liquidator repays the whole debt and seizes zETH at a ~4.4% discount. The deployer restores the price to 2,000. | Closed position, collateral seized |
 
-Each prints the borrower's position, market totals and vault assets before and after.
+Morpho has no on-chain margin call: like in traditional finance it is an alert (from a lender, a monitoring service or a front end) that a loan is close to liquidation. Demo 2 prints that alert from the on-chain numbers. Each demo refuses to run out of order ("run demo 1 (borrow) first"), and prints the borrower's position, market totals and vault assets before and after. Demo 3b also works straight after demo 1.
 
 **Wallets.** The demos sign with encrypted Foundry keystores named in `.env`:
 
@@ -129,11 +131,13 @@ Each prints the borrower's position, market totals and vault assets before and a
 
 `demo.sh` asks for each keystore's password once per run. Extra arguments go to `forge`, e.g. `./demo.sh borrow --rpc-url http://127.0.0.1:8545` against a local `anvil --fork-url` copy of the testnet.
 
-Optional env: demo 1 — `LEND_ZUSD` (20000), `COLLATERAL_ZETH` (10), `BORROW_ZUSD` (10000), `PRICE_USD` (2000); demo 2 — `CRASH_PRICE_USD` (default: price giving 95% LTV), `RESTORE_PRICE_USD` (2000).
+Optional env: demo 1 — `LEND_ZUSD` (20000), `COLLATERAL_ZETH` (10), `BORROW_ZUSD` (10000), `PRICE_USD` (2000); demo 2 — `MARGIN_LTV_BPS` (8000), `SAFE_LTV_BPS` (5000); demo 3a — `RESTORE_PRICE_USD` (2000); demo 3b — `CRASH_PRICE_USD` (default: price giving 95% LTV), `RESTORE_PRICE_USD` (2000).
 
 > `demo.sh` caps the tip at 1 gwei (see the gas note above) and doubles gas estimates: forge estimates in a simulation where no time has passed, and interest accrual costs more gas once time has passed on chain.
 
-### Demo run on testnet (12 Nov 2026)
+### Earlier two-demo run on testnet (12 Nov 2026)
+
+Before the margin call and repayment demos existed, borrow and liquidation ran as "demo 1" and "demo 2" (`Demo2Liquidate.s.sol`, now `Demo3bLiquidate.s.sol`):
 
 | Step | Result | Tx |
 |---|---|---|

@@ -9,7 +9,7 @@ import {DemoBase} from "./DemoBase.sol";
 ///    zETH (+ ZTH for gas) to the borrower.
 /// 2. Lender (deployer): deposits zUSD into the "ZLP zUSD Vault", which supplies it to the market.
 /// 3. Borrower: posts zETH collateral and borrows zUSD at 50% LTV.
-/// Run demo 2 (Demo2Liquidate) afterwards to liquidate this position.
+/// Next: demo 2 (Demo2MarginCall), then demo 3a (Demo3aRepay) or 3b (Demo3bLiquidate).
 /// Optional env: BORROWER (default deployer), LEND_ZUSD (default 20000), COLLATERAL_ZETH (default 10),
 ///               BORROW_ZUSD (default 10000), PRICE_USD (default 2000).
 contract Demo1Borrow is DemoBase {
@@ -32,8 +32,8 @@ contract Demo1Borrow is DemoBase {
         uint256 shares = vault.deposit(lend, deployer);
         vm.stopBroadcast();
         console.log("--- LEND");
-        console.log("deposited zUSD into ZLP zUSD Vault (6 dp):", lend);
-        console.log("vault shares received (zlpUSD):", shares);
+        console.log("  deposited into ZLP zUSD Vault:", _usd(lend));
+        console.log("  vault shares received:        ", string.concat(_fmt(shares, 18), " zlpUSD"));
 
         // 3. Borrower: collateral + borrow.
         vm.startBroadcast(borrower);
@@ -42,9 +42,10 @@ contract Demo1Borrow is DemoBase {
         morpho.borrow(mp, borrow, 0, borrower, borrower);
         vm.stopBroadcast();
         console.log("--- BORROW");
-        console.log("collateral posted zETH (18 dp):", coll);
-        console.log("borrowed zUSD (6 dp):", borrow);
+        console.log("  collateral posted:", _eth(coll));
+        console.log("  borrowed:         ", _usd(borrow));
 
         _report("AFTER");
+        console.log("  next: demo 2 (./demo.sh margin-call)");
     }
 }
