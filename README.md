@@ -149,6 +149,20 @@ Optional env: demo 1 — `LEND_ZUSD` (20000), `COLLATERAL_ZETH` (10), `BORROW_ZU
 
 Gas: 0.0004 ZTH (demo 1), 0.00003 ZTH (demo 2), 0.0002 ZTH (demo 3a). Records: `demo/broadcast/Demo1Borrow.s.sol/`, `Demo2MarginCall.s.sol/`, `Demo3aRepay.s.sol/`.
 
+### Run on testnet: borrow → margin call → liquidation (12 Nov 2026)
+
+| Step | Result | Tx |
+|---|---|---|
+| 1: lend | 20,000 zUSD deposited into the ZLP zUSD Vault (vault total 160,000 zUSD) | [`0x0c368ea2…`](https://explorer.testnet.zenith.network/transactions/0x0c368ea252a53ad6f8243156f37d3882c79d1d31a89319da2fe944c3cbab87a3) |
+| 1: collateral | 10 zETH posted | [`0xab657566…`](https://explorer.testnet.zenith.network/transactions/0xab65756619377f492ddc73f758b7365f27c00f8594a682e2cedd20832c35c20e) |
+| 1: borrow | 10,000 zUSD borrowed, 50.00% LTV | [`0x03ab0b11…`](https://explorer.testnet.zenith.network/transactions/0x03ab0b11d847dc536985998c7155048086bd06e6d0e24968d3dcb4f5fa195cbe) |
+| 2: margin call | Price 2,000 → 1,250 zUSD/zETH, loan at 80.00% LTV. Liquidation price 1,162.79 (6.97% lower); repay 3,750 zUSD or add 6 zETH to get back to 50% | [`0x2e933e9a…`](https://explorer.testnet.zenith.network/transactions/0x2e933e9a71d0e6b095e6837c6b709a18d4c49b9d758afe5050aea3d48c9017f9) |
+| 3b: price drop | Borrower did not respond; price 1,250 → 1,052.63, loan at 95.00% LTV | [`0xc84fce66…`](https://explorer.testnet.zenith.network/transactions/0xc84fce66a29c78874f09dd25b985dfe47362cfd722e1734002ff75d277d98050) |
+| 3b: liquidate | Liquidator repaid 10,000.00011 zUSD, seized 9.9165 zETH (10,438.41 zUSD at 1,052.63, +4.38%); no bad debt | [`0xd13aadad…`](https://explorer.testnet.zenith.network/transactions/0xd13aadad83d09c5ab092861d5b49fb623e43b81da06375f429917d63ce324bf7) |
+| 3b: restore | Price back to 2,000; borrower left with 0 debt and 0.0835 zETH | [`0x42c3e98b…`](https://explorer.testnet.zenith.network/transactions/0x42c3e98bde9cfb4a3f100f3142f9912aa54a467da04c3c01ddea75284fcddafa) |
+
+Gas: 0.0004 ZTH (demo 1), 0.00003 ZTH (demo 2), 0.0002 ZTH (demo 3b). Records: `demo/broadcast/Demo1Borrow.s.sol/`, `Demo2MarginCall.s.sol/`, `Demo3bLiquidate.s.sol/` (the `run-latest.json` files hold this run; the repayment path's runs are kept by timestamp).
+
 ### Earlier two-demo run on testnet (12 Nov 2026)
 
 Before the margin call and repayment demos existed, borrow and liquidation ran as "demo 1" and "demo 2" (`Demo2Liquidate.s.sol`, now `Demo3bLiquidate.s.sol`):
