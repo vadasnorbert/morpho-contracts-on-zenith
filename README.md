@@ -163,21 +163,6 @@ Gas: 0.0004 ZTH (demo 1), 0.00003 ZTH (demo 2), 0.0002 ZTH (demo 3a). Records: `
 
 Gas: 0.0004 ZTH (demo 1), 0.00003 ZTH (demo 2), 0.0002 ZTH (demo 3b). Records: `demo/broadcast/Demo1Borrow.s.sol/`, `Demo2MarginCall.s.sol/`, `Demo3bLiquidate.s.sol/` (the `run-latest.json` files hold this run; the repayment path's runs are kept by timestamp).
 
-### First liquidation on testnet
-
-The first liquidation (before the demos were split, script then called `Liquidate.s.sol`) liquidated the position opened by the setup script: price dropped to 1,100 zUSD/zETH (10 zETH / 10,000 zUSD went from 50% to 90.9% LTV), liquidator `0x87f36CfCA238B1c3a1AD15889ec0B971F9A0F599`. Result on testnet (12 Nov 2026):
-
-| | |
-|---|---|
-| Debt repaid by liquidator | 10,000.01 zUSD |
-| Collateral seized | 9.4895 zETH (worth 10,438.43 zUSD at 1,100) |
-| Liquidation incentive | 4.38% = `1 / (1 - 0.3 × (1 - 0.86))`, Morpho's formula |
-| Borrower after | 0 debt, 0.5105 zETH collateral left |
-| Liquidate tx | [`0x5ca1998b…3099b55`](https://explorer.testnet.zenith.network/transactions/0x5ca1998b237a09e02e52446526e683713c019ea7de8536a11b31762573099b55) |
-| Price restore tx | [`0x03f493ea…4aa054b602`](https://explorer.testnet.zenith.network/transactions/0x03f493ea77f57b5dd7dd57692f5fbef9a4bfca0db7c545c7ac62748aa054b602) |
-
-A first attempt (`demo/broadcast/Liquidate.s.sol/936485/run-1794481584218.json`) ran out of liquidator gas because of the high suggested tip above; the re-run (`run-1794481780457.json`) completed it.
-
 ## License
 
 - `morpho-blue/` and `vault-v2/` are Morpho's code under their own licenses (GPL-2.0-or-later for `Morpho.sol`, `VaultV2.sol` and `VaultV2Factory.sol`; MIT for the rest). See the LICENSE files in each submodule.
