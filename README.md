@@ -163,21 +163,6 @@ Gas: 0.0004 ZTH (demo 1), 0.00003 ZTH (demo 2), 0.0002 ZTH (demo 3a). Records: `
 
 Gas: 0.0004 ZTH (demo 1), 0.00003 ZTH (demo 2), 0.0002 ZTH (demo 3b). Records: `demo/broadcast/Demo1Borrow.s.sol/`, `Demo2MarginCall.s.sol/`, `Demo3bLiquidate.s.sol/` (the `run-latest.json` files hold this run; the repayment path's runs are kept by timestamp).
 
-### Earlier two-demo run on testnet (12 Nov 2026)
-
-Before the margin call and repayment demos existed, borrow and liquidation ran as "demo 1" and "demo 2" (`Demo2Liquidate.s.sol`, now `Demo3bLiquidate.s.sol`):
-
-| Step | Result | Tx |
-|---|---|---|
-| Demo 1: lend | 20,000 zUSD deposited into the ZLP zUSD Vault (vault total 120,000 zUSD) | [`0xc4b35f09…`](https://explorer.testnet.zenith.network/transactions/0xc4b35f09e998ee65be83352922fa853aa13378077665dc145aaa32b2f2bb68ca) |
-| Demo 1: collateral | 10 zETH posted (10.51 zETH incl. leftover from the first liquidation) | [`0x936724d9…`](https://explorer.testnet.zenith.network/transactions/0x936724d906a127f37f0af3a344fa249794d0cb60bcf1a3f3dcfa23ee117ae4a2) |
-| Demo 1: borrow | 10,000 zUSD borrowed, 47.6% LTV | [`0x742effd3…`](https://explorer.testnet.zenith.network/transactions/0x742effd375403a6cf97c8803d9bb2c27e0f7be0dde6b2489bb7351817700753e) |
-| Demo 2: price drop | 2,000 → 1,001 zUSD/zETH, position at 95% LTV | [`0x3037933c…`](https://explorer.testnet.zenith.network/transactions/0x3037933ca9facbfe618aa0321ad0048c5695b5eba95a3d9acd590dd69e86eeda) |
-| Demo 2: liquidate | Liquidator repaid 10,000.0005 zUSD, seized 10.4228 zETH (10,438.41 zUSD at 1,001, +4.38%) | [`0x0483f8b7…`](https://explorer.testnet.zenith.network/transactions/0x0483f8b76148397098047a635cdd51e2c86282eb3f5968fe592c53e599b85902) |
-| Demo 2: restore | Price back to 2,000; borrower left with 0 debt and 0.0878 zETH | [`0x560c1b26…`](https://explorer.testnet.zenith.network/transactions/0x560c1b26e301b588ac9586169967b50f53ec42e0b8f50efda5a4929fcb87e4e7) |
-
-Gas: 0.0004 ZTH for demo 1, 0.0002 ZTH for demo 2. Records: `demo/broadcast/Demo1Borrow.s.sol/` and `demo/broadcast/Demo2Liquidate.s.sol/`.
-
 ### First liquidation on testnet
 
 The first liquidation (before the demos were split, script then called `Liquidate.s.sol`) liquidated the position opened by the setup script: price dropped to 1,100 zUSD/zETH (10 zETH / 10,000 zUSD went from 50% to 90.9% LTV), liquidator `0x87f36CfCA238B1c3a1AD15889ec0B971F9A0F599`. Result on testnet (12 Nov 2026):
